@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2進数学習ゲーム</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f0f8ff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #2e8b57;
+    }
+    #game-area {
+      margin-top: 20px;
+    }
+    .tile {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      margin: 5px;
+      background-color: white;
+      border: 2px solid #ccc;
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 50px;
+      user-select: none;
+    }
+    .tile.active {
+      background-color: #90ee90;
+    }
+    .weights {
+      margin-top: 5px;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+    .weight {
+      width: 50px;
+      text-align: center;
+      font-size: 12px;
+      color: #333;
+    }
+    #controls, #message {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+    }
+    #score {
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>2進数チャレンジ！</h1>
+  <div id="controls">
+    <button onclick="setMode(4)">初級モード（4ビット）</button>
+    <button onclick="setMode(8)">上級モード（8ビット）</button>
+    <button onclick="toggleHint()">ヒント</button>
+  </div>
+
+  <div id="game-area">
+    <h2>変換する数：<span id="decimal-display"></span></h2>
+    <div id="tile-container"></div>
+    <div class="weights" id="weight-container"></div>
+    <div id="message"></div>
+    <button onclick="submitAnswer()">答える</button>
+  </div>
+
+  <div id="score">正答数：<span id="score-count">0</span></div>
+
+  <script>
+    let bitCount = 4;
+    let currentNumber = 0;
+    let attempts = 0;
+    let correctCount = 0;
+    let showHint = false;
+
+    function setMode(bits) {
+      bitCount = bits;
+      document.getElementById("weight-container").innerHTML = "";
+      showHint = false;
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      currentNumber = Math.floor(Math.random() * (2 ** bitCount - 1)) + 1;
+      document.getElementById("decimal-display").innerText = currentNumber;
+      document.getElementById("message").innerText = "";
+      attempts = 0;
+      renderTiles();
+    }
+
+    function renderTiles() {
+      const container = document.getElementById("tile-container");
+      const weightContainer = document.getElementById("weight-container");
+      container.innerHTML = "";
+      weightContainer.innerHTML = "";
+
+      for (let i = 0; i < bitCount; i++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile");
+        tile.innerText = "0";
+        tile.dataset.bit = i;
+        tile.onclick = () => toggleBit(tile);
+        container.appendChild(tile);
+
+        const weight = document.createElement("div");
+        weight.className = "weight";
+        weight.innerText = 2 ** (bitCount - 1 - i);
+        weightContainer.appendChild(weight);
+      }
+
+      weightContainer.style.display = showHint ? "flex" : "none";
+    }
+
+    function toggleBit(tile) {
+      const current = tile.innerText;
+      tile.innerText = current === "0" ? "1" : "0";
+      tile.classList.toggle("active");
+    }
+
+    function getBinaryAnswer() {
+      const tiles = document.querySelectorAll(".tile");
+      return Array.from(tiles).map(t => t.innerText).join("");
+    }
+
+    function submitAnswer() {
+      const binary = getBinaryAnswer();
+      const value = parseInt(binary, 2);
+      if (value === currentNumber) {
+        correctCount++;
+        document.getElementById("score-count").innerText = correctCount;
+        document.getElementById("message").innerHTML = "<span style='color: green;'>正解！</span>";
+        setTimeout(nextQuestion, 1000);
+      } else {
+        attempts++;
+        if (attempts >= 3) {
+          document.getElementById("message").innerHTML = `<span style='color: red;'>残念！正解は ${currentNumber.toString(2).padStart(bitCount, "0")} でした</span>`;
+          setTimeout(nextQuestion, 2000);
+        } else {
+          document.getElementById("message").innerHTML = "<span style='color: red;'>不正解！もう一度試してみよう！</span>";
+        }
+      }
+    }
+
+    function toggleHint() {
+      showHint = !showHint;
+      document.getElementById("weight-container").style.display = showHint ? "flex" : "none";
+    }
+
+    // 初期表示
+    setMode(4);
+  </script>
+</body>
+</html>
