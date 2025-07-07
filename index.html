@@ -17,11 +17,15 @@
     #game-area {
       margin-top: 20px;
     }
+    .tile-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
     .tile {
-      display: inline-block;
       width: 50px;
       height: 50px;
-      margin: 5px;
       background-color: white;
       border: 2px solid #ccc;
       cursor: pointer;
@@ -37,6 +41,7 @@
       display: flex;
       justify-content: center;
       gap: 5px;
+      flex-wrap: wrap;
     }
     .weight {
       width: 50px;
@@ -69,7 +74,7 @@
 
   <div id="game-area">
     <h2>変換する数：<span id="decimal-display"></span></h2>
-    <div id="tile-container"></div>
+    <div id="tile-container" class="tile-container"></div>
     <div class="weights" id="weight-container"></div>
     <div id="message"></div>
     <button onclick="submitAnswer()">答える</button>
