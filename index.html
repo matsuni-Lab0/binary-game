@@ -2,175 +2,198 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <title>2進数変換ゲーム</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2進数学習ゲーム</title>
   <style>
     body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f0f8ff;
-      text-align: center;
+      font-family: sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
       padding: 20px;
-    }
-    h1 {
-      color: #2e8b57;
-    }
-    #game-area {
-      margin-top: 20px;
-    }
-    #tile-container {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: center;
-      overflow-x: auto;
-      margin-bottom: 10px;
-    }
-    .tile {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 50px;
-      height: 50px;
-      margin: 5px;
-      background-color: #e6f2ff;
-      border: 2px solid #ccc;
-      cursor: pointer;
-      font-size: 24px;
-      user-select: none;
-      flex-shrink: 0;
-    }
-    .tile.active {
-      background-color: #90ee90;
-    }
-    .weights {
-      margin-top: 5px;
-      display: flex;
-      justify-content: center;
-      gap: 5px;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-    }
-    .weight {
-      width: 50px;
       text-align: center;
-      font-size: 12px;
+    }
+
+    h1 {
       color: #333;
-      flex-shrink: 0;
     }
-    #controls, #message {
-      margin-top: 20px;
-    }
-    button {
+
+    #mode-buttons button {
+      margin: 5px;
       padding: 10px 20px;
       font-size: 16px;
-      margin: 10px;
-      cursor: pointer;
     }
-    #score {
-      font-size: 18px;
+
+    #number-display {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+
+    #tile-container-wrapper {
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    #tile-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    .tile-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .tile {
+      width: 50px;
+      height: 50px;
+      background-color: #e6f2ff;
+      border: 2px solid #ccc;
+      font-size: 24px;
+      line-height: 50px;
+      cursor: pointer;
+      user-select: none;
+      text-align: center;
+    }
+
+    .tile.active {
+      background-color: #b3e0ff;
+    }
+
+    .weight {
+      font-size: 12px;
       color: #333;
+      margin-top: 4px;
+    }
+
+    .weight.hidden {
+      visibility: hidden;
+    }
+
+    #feedback {
+      margin-top: 20px;
+      font-size: 20px;
+      height: 30px;
+    }
+
+    #score {
+      margin-top: 10px;
+    }
+
+    button {
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>2進数チャレンジ！</h1>
-  <div id="controls">
-    <button onclick="setMode(4)">初級モード（4ビット）</button>
-    <button onclick="setMode(8)">上級モード（8ビット）</button>
-    <button onclick="toggleHint()">ヒント</button>
+  <h1>2進数変換ゲーム</h1>
+  <div id="mode-buttons">
+    <button onclick="setMode('easy')">初級モード（4ビット）</button>
+    <button onclick="setMode('hard')">上級モード（8ビット）</button>
+    <button onclick="toggleHint()">ヒント表示/非表示</button>
   </div>
-
-  <div id="game-area">
-    <h2>変換する数：<span id="decimal-display"></span></h2>
+  <div id="number-display"></div>
+  <div id="tile-container-wrapper">
     <div id="tile-container"></div>
-    <div class="weights" id="weight-container"></div>
-    <div id="message"></div>
-    <button onclick="submitAnswer()">答える</button>
   </div>
-
-  <div id="score">正答数：<span id="score-count">0</span></div>
+  <div id="feedback"></div>
+  <div id="score">正解数: <span id="correct-count">0</span></div>
 
   <script>
-    let bitCount = 4;
+    let mode = "easy";
     let currentNumber = 0;
-    let attempts = 0;
+    let bitCount = 4;
+    let incorrectTries = 0;
     let correctCount = 0;
     let showHint = false;
 
-    function setMode(bits) {
-      bitCount = bits;
-      document.getElementById("weight-container").innerHTML = "";
-      showHint = false;
-      nextQuestion();
+    function setMode(newMode) {
+      mode = newMode;
+      bitCount = mode === "easy" ? 4 : 8;
+      incorrectTries = 0;
+      generateProblem();
     }
 
-    function nextQuestion() {
-      currentNumber = Math.floor(Math.random() * (2 ** bitCount - 1)) + 1;
-      document.getElementById("decimal-display").innerText = currentNumber;
-      document.getElementById("message").innerText = "";
-      attempts = 0;
+    function generateProblem() {
+      currentNumber = Math.floor(Math.random() * ((1 << bitCount) - 1)) + 1;
+      document.getElementById("number-display").innerText = `10進数：${currentNumber}`;
       renderTiles();
+      document.getElementById("feedback").innerText = "";
     }
 
     function renderTiles() {
       const container = document.getElementById("tile-container");
-      const weightContainer = document.getElementById("weight-container");
       container.innerHTML = "";
-      weightContainer.innerHTML = "";
 
       for (let i = 0; i < bitCount; i++) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "tile-wrapper";
+
         const tile = document.createElement("div");
         tile.classList.add("tile");
         tile.innerText = "0";
         tile.dataset.bit = i;
         tile.onclick = () => toggleBit(tile);
-        container.appendChild(tile);
+        wrapper.appendChild(tile);
 
         const weight = document.createElement("div");
         weight.className = "weight";
         weight.innerText = 2 ** (bitCount - 1 - i);
-        weightContainer.appendChild(weight);
-      }
+        weight.classList.toggle("hidden", !showHint);
+        wrapper.appendChild(weight);
 
-      weightContainer.style.display = showHint ? "flex" : "none";
+        container.appendChild(wrapper);
+      }
     }
 
     function toggleBit(tile) {
-      const current = tile.innerText;
-      tile.innerText = current === "0" ? "1" : "0";
-      tile.classList.toggle("active");
+      const isActive = tile.classList.toggle("active");
+      tile.innerText = isActive ? "1" : "0";
+      checkAnswer();
     }
 
-    function getBinaryAnswer() {
+    function getUserAnswer() {
       const tiles = document.querySelectorAll(".tile");
-      return Array.from(tiles).map(t => t.innerText).join("");
+      let binary = "";
+      tiles.forEach(tile => binary += tile.innerText);
+      return parseInt(binary, 2);
     }
 
-    function submitAnswer() {
-      const binary = getBinaryAnswer();
-      const value = parseInt(binary, 2);
-      if (value === currentNumber) {
+    function checkAnswer() {
+      const answer = getUserAnswer();
+      if (answer === currentNumber) {
+        document.getElementById("feedback").innerText = "正解！";
         correctCount++;
-        document.getElementById("score-count").innerText = correctCount;
-        document.getElementById("message").innerHTML = "<span style='color: green;'>正解！</span>";
-        setTimeout(nextQuestion, 1000);
+        document.getElementById("correct-count").innerText = correctCount;
+        setTimeout(() => {
+          incorrectTries = 0;
+          generateProblem();
+        }, 1000);
       } else {
-        attempts++;
-        if (attempts >= 3) {
-          document.getElementById("message").innerHTML = `<span style='color: red;'>残念！正解は ${currentNumber.toString(2).padStart(bitCount, "0")} でした</span>`;
-          setTimeout(nextQuestion, 2000);
+        incorrectTries++;
+        if (incorrectTries >= 3) {
+          document.getElementById("feedback").innerText = `残念！正解は ${currentNumber.toString(2).padStart(bitCount, "0")}`;
+          setTimeout(() => {
+            incorrectTries = 0;
+            generateProblem();
+          }, 2000);
         } else {
-          document.getElementById("message").innerHTML = "<span style='color: red;'>不正解！もう一度試してみよう！</span>";
+          document.getElementById("feedback").innerText = `不正解（あと${3 - incorrectTries}回）`;
         }
       }
     }
 
     function toggleHint() {
       showHint = !showHint;
-      document.getElementById("weight-container").style.display = showHint ? "flex" : "none";
+      const weights = document.querySelectorAll(".weight");
+      weights.forEach(w => w.classList.toggle("hidden", !showHint));
     }
 
-    // 初期表示
-    setMode(4);
+    window.onload = () => {
+      setMode("easy");
+    };
   </script>
 </body>
 </html>
