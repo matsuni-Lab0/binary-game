@@ -1,177 +1,171 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2進数学習ゲーム</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>10進→2進ゲーム</title>
   <style>
     body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f0f8ff;
+      font-family: 'Arial', sans-serif;
+      background-color: #f9f9f9;
       text-align: center;
       padding: 20px;
     }
     h1 {
-      color: #2e8b57;
+      color: #2c3e50;
     }
-    #game-area {
-      margin-top: 20px;
-    }
-    .tile-container {
+    .binary-tiles {
       display: flex;
-      justify-content: flex-start;
-      overflow-x: auto;
-      gap: 5px;
-      padding-bottom: 10px;
-      margin: 0 auto;
-      max-width: 100%;
+      justify-content: center;
+      margin: 20px auto;
+      flex-wrap: wrap;
+      max-width: 400px;
     }
     .tile {
-      min-width: 40px;
+      width: 40px;
       height: 40px;
-      background-color: white;
-      border: 2px solid #ccc;
-      cursor: pointer;
-      font-size: 20px;
+      margin: 5px;
       line-height: 40px;
+      font-size: 20px;
+      border: 2px solid #ccc;
+      background-color: white;
+      cursor: pointer;
       user-select: none;
-      flex-shrink: 0;
     }
     .tile.active {
-      background-color: #90ee90;
+      background-color: #a8ff9e;
+    }
+    .controls {
+      margin: 20px;
+    }
+    .hint {
+      margin-top: 10px;
+      color: #888;
+      font-size: 14px;
     }
     .weights {
-      margin-top: 5px;
       display: flex;
-      justify-content: flex-start;
-      gap: 5px;
-      overflow-x: auto;
-      max-width: 100%;
-      padding-bottom: 10px;
-      margin: 0 auto;
+      justify-content: center;
+      margin-top: 5px;
     }
     .weight {
-      min-width: 40px;
-      text-align: center;
+      width: 40px;
+      margin: 5px;
       font-size: 12px;
-      color: #333;
-      flex-shrink: 0;
     }
-    #controls, #message {
-      margin-top: 20px;
+    .result {
+      font-size: 18px;
+      margin-top: 15px;
     }
-    button {
+    .mode-btn {
+      margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
-      margin: 10px;
-      cursor: pointer;
-    }
-    #score {
-      font-size: 18px;
-      color: #333;
     }
   </style>
 </head>
 <body>
-  <h1>2進数チャレンジ！</h1>
-  <div id="controls">
-    <button onclick="setMode(4)">初級モード（4ビット）</button>
-    <button onclick="setMode(8)">上級モード（8ビット）</button>
+  <h1>10進→2進ゲーム</h1>
+  <div>
+    <button class="mode-btn" onclick="setMode('easy')">初級（4ビット）</button>
+    <button class="mode-btn" onclick="setMode('hard')">上級（8ビット）</button>
+  </div>
+  <h2 id="question"></h2>
+  <div class="binary-tiles" id="tiles"></div>
+  <div class="weights" id="weights" style="display: none;"></div>
+  <div class="controls">
+    <button onclick="submitAnswer()">回答する</button>
     <button onclick="toggleHint()">ヒント</button>
   </div>
-
-  <div id="game-area">
-    <h2>変換する数：<span id="decimal-display"></span></h2>
-    <div id="tile-container" class="tile-container"></div>
-    <div class="weights" id="weight-container"></div>
-    <div id="message"></div>
-    <button onclick="submitAnswer()">答える</button>
-  </div>
-
-  <div id="score">正答数：<span id="score-count">0</span></div>
+  <div class="result" id="result"></div>
+  <p>正答数：<span id="score">0</span></p>
 
   <script>
-    let bitCount = 4;
-    let currentNumber = 0;
-    let attempts = 0;
-    let correctCount = 0;
-    let showHint = false;
+    let mode = 'easy';
+    let bits = 4;
+    let currentDecimal = 0;
+    let wrongCount = 0;
+    let score = 0;
+    let hintVisible = false;
 
-    function setMode(bits) {
-      bitCount = bits;
-      document.getElementById("weight-container").innerHTML = "";
-      showHint = false;
+    const questionEl = document.getElementById('question');
+    const tilesEl = document.getElementById('tiles');
+    const weightsEl = document.getElementById('weights');
+    const resultEl = document.getElementById('result');
+    const scoreEl = document.getElementById('score');
+
+    function setMode(m) {
+      mode = m;
+      bits = m === 'easy' ? 4 : 8;
+      scoreEl.textContent = score;
       nextQuestion();
     }
 
     function nextQuestion() {
-      currentNumber = Math.floor(Math.random() * (2 ** bitCount - 1)) + 1;
-      document.getElementById("decimal-display").innerText = currentNumber;
-      document.getElementById("message").innerText = "";
-      attempts = 0;
-      renderTiles();
-    }
+      hintVisible = false;
+      weightsEl.style.display = 'none';
+      resultEl.textContent = '';
+      wrongCount = 0;
+      currentDecimal = Math.floor(Math.random() * (2 ** bits - 1)) + 1;
+      questionEl.textContent = `${currentDecimal} を2進数に変換しよう！`;
+      tilesEl.innerHTML = '';
+      weightsEl.innerHTML = '';
+      for (let i = 0; i < bits; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.textContent = '0';
+        tile.addEventListener('click', () => toggleTile(tile));
+        tilesEl.appendChild(tile);
 
-    function renderTiles() {
-      const container = document.getElementById("tile-container");
-      const weightContainer = document.getElementById("weight-container");
-      container.innerHTML = "";
-      weightContainer.innerHTML = "";
-
-      for (let i = 0; i < bitCount; i++) {
-        const tile = document.createElement("div");
-        tile.classList.add("tile");
-        tile.innerText = "0";
-        tile.dataset.bit = i;
-        tile.onclick = () => toggleBit(tile);
-        container.appendChild(tile);
-
-        const weight = document.createElement("div");
-        weight.className = "weight";
-        weight.innerText = 2 ** (bitCount - 1 - i);
-        weightContainer.appendChild(weight);
+        const weight = document.createElement('div');
+        weight.className = 'weight';
+        weight.textContent = 2 ** (bits - 1 - i);
+        weightsEl.appendChild(weight);
       }
-
-      weightContainer.style.display = showHint ? "flex" : "none";
     }
 
-    function toggleBit(tile) {
-      const current = tile.innerText;
-      tile.innerText = current === "0" ? "1" : "0";
-      tile.classList.toggle("active");
+    function toggleTile(tile) {
+      if (tile.textContent === '0') {
+        tile.textContent = '1';
+        tile.classList.add('active');
+      } else {
+        tile.textContent = '0';
+        tile.classList.remove('active');
+      }
     }
 
-    function getBinaryAnswer() {
-      const tiles = document.querySelectorAll(".tile");
-      return Array.from(tiles).map(t => t.innerText).join("");
+    function getAnswer() {
+      let binaryStr = '';
+      document.querySelectorAll('.tile').forEach(tile => {
+        binaryStr += tile.textContent;
+      });
+      return parseInt(binaryStr, 2);
     }
 
     function submitAnswer() {
-      const binary = getBinaryAnswer();
-      const value = parseInt(binary, 2);
-      if (value === currentNumber) {
-        correctCount++;
-        document.getElementById("score-count").innerText = correctCount;
-        document.getElementById("message").innerHTML = "<span style='color: green;'>正解！</span>";
+      const answer = getAnswer();
+      if (answer === currentDecimal) {
+        resultEl.textContent = '正解！次の問題へ';
+        score++;
+        scoreEl.textContent = score;
         setTimeout(nextQuestion, 1000);
       } else {
-        attempts++;
-        if (attempts >= 3) {
-          document.getElementById("message").innerHTML = `<span style='color: red;'>残念！正解は ${currentNumber.toString(2).padStart(bitCount, "0")} でした</span>`;
+        wrongCount++;
+        if (wrongCount >= 3) {
+          resultEl.textContent = `不正解！正解は ${currentDecimal} (${currentDecimal.toString(2)}) でした。次の問題へ`;
           setTimeout(nextQuestion, 2000);
         } else {
-          document.getElementById("message").innerHTML = "<span style='color: red;'>不正解！もう一度試してみよう！</span>";
+          resultEl.textContent = `不正解！あと ${3 - wrongCount} 回チャンス`; 
         }
       }
     }
 
     function toggleHint() {
-      showHint = !showHint;
-      document.getElementById("weight-container").style.display = showHint ? "flex" : "none";
+      hintVisible = !hintVisible;
+      weightsEl.style.display = hintVisible ? 'flex' : 'none';
     }
 
-    // 初期表示
-    setMode(4);
+    setMode('easy');
   </script>
 </body>
 </html>
